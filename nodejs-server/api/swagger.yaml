@@ -1,0 +1,713 @@
+---
+swagger: "2.0"
+info:
+  description: "Interact with the enterprise blockchain through Hyperledger Fabric\
+    \ API"
+  version: "1.0.0"
+  title: "Hyperledger Fabric API"
+host: "127.0.0.1:7050"
+schemes:
+- "http"
+- "https"
+produces:
+- "application/json"
+paths:
+  /chain:
+    get:
+      tags:
+      - "Blockchain"
+      summary: "Blockchain information"
+      description: "The Chain endpoint returns information about the current state\
+        \ of the blockchain such as the height, the current block hash, and the previous\
+        \ block hash."
+      operationId: "getChain"
+      parameters: []
+      responses:
+        200:
+          description: "Blockchain information"
+          schema:
+            $ref: "#/definitions/BlockchainInfo"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Blockchain"
+  /chain/blocks/{Block}:
+    get:
+      tags:
+      - "Block"
+      summary: "Individual block information"
+      description: "The {Block} endpoint returns information about a specific block\
+        \ within the Blockchain. Note that the genesis block is block zero."
+      operationId: "getBlock"
+      parameters:
+      - name: "Block"
+        in: "path"
+        description: "Block number to retrieve"
+        required: true
+        type: "integer"
+        format: "uint64"
+      responses:
+        200:
+          description: "Individual Block contents"
+          schema:
+            $ref: "#/definitions/Block"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Block"
+  /transactions/{ID}:
+    get:
+      tags:
+      - "Transactions"
+      summary: "Individual transaction contents"
+      description: "The /transactions/{ID} endpoint returns the transaction matching\
+        \ the specified TXID."
+      operationId: "getTransaction"
+      parameters:
+      - name: "ID"
+        in: "path"
+        description: "Transaction to retrieve from the blockchain."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Individual Transaction contents"
+          schema:
+            $ref: "#/definitions/Transaction"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Transactions"
+  /chaincode:
+    post:
+      tags:
+      - "Chaincode"
+      summary: "Service endpoint for Chaincode operations"
+      description: "The /chaincode endpoint receives requests to deploy, invoke, and\
+        \ query a target Chaincode. This service endpoint implements the JSON RPC\
+        \ 2.0 specification with the payload identifying the desired Chaincode operation\
+        \ within the 'method' field."
+      operationId: "chaincodeOp"
+      parameters:
+      - in: "body"
+        name: "ChaincodeOpPayload"
+        description: "Chaincode JSON RPC 2.0 payload"
+        required: true
+        schema:
+          $ref: "#/definitions/ChaincodeOpPayload"
+      responses:
+        200:
+          description: "Chaincode operation successful"
+          schema:
+            $ref: "#/definitions/ChaincodeOpSuccess"
+        default:
+          description: "Chaincode operation failed"
+          schema:
+            $ref: "#/definitions/ChaincodeOpFailure"
+      x-swagger-router-controller: "Chaincode"
+  /registrar:
+    post:
+      tags:
+      - "Registrar"
+      summary: "Register a user with the certificate authority"
+      description: "The /registrar endpoint receives requests to register a user with\
+        \ the certificate authority. The request must supply the registration id and\
+        \ password within the payload. If the registration is successful, the required\
+        \ transaction certificates are received and stored locally. Otherwise, an\
+        \ error is displayed alongside with a reason for the failure."
+      operationId: "registerUser"
+      parameters:
+      - in: "body"
+        name: "Secret"
+        description: "User enrollment credentials"
+        required: true
+        schema:
+          $ref: "#/definitions/Secret"
+      responses:
+        200:
+          description: "Successfully registered user with the certificate authority"
+          schema:
+            $ref: "#/definitions/OK"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Registrar"
+  /registrar/{enrollmentID}:
+    get:
+      tags:
+      - "Registrar"
+      summary: "Confirm the user has registered with the certificate authority"
+      description: "The /registrar/{enrollmentID} endpoint confirms whether the specified\
+        \ user has registered with the certificate authority. If the user has registered,\
+        \ a confirmation message will be returned. Otherwise, an authorization failure\
+        \ will result."
+      operationId: "getUserRegistration"
+      parameters:
+      - name: "enrollmentID"
+        in: "path"
+        description: "Username for which registration is to be confirmed"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Confirm registration for target user"
+          schema:
+            $ref: "#/definitions/OK"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Registrar"
+    delete:
+      tags:
+      - "Registrar"
+      summary: "Delete user login tokens from local storage"
+      description: "The /registrar/{enrollmentID} endpoint deletes any existing client\
+        \ login tokens from local storage. After the completion of this request, the\
+        \ target user will no longer be able to execute transactions."
+      operationId: "deleteUserRegistration"
+      parameters:
+      - name: "enrollmentID"
+        in: "path"
+        description: "Username for which login tokens are to be deleted"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Confirm deletion of user login tokens"
+          schema:
+            $ref: "#/definitions/OK"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Registrar"
+  /registrar/{enrollmentID}/ecert:
+    get:
+      tags:
+      - "Registrar"
+      summary: "Retrieve user enrollment certificate"
+      description: "The /registrar/{enrollmentID}/ecert endpoint retrieves the enrollment\
+        \ certificate for a given user that has registered with the certificate authority.\
+        \ If the user has registered, a confirmation message will be returned containing\
+        \ the URL-encoded enrollment certificate. Otherwise, an error will result."
+      operationId: "getUserEnrollmentCertificate"
+      parameters:
+      - name: "enrollmentID"
+        in: "path"
+        description: "EnrollmentID for which the certificate is requested"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Confirm registration for target user and return the URL-encoded\
+            \ enrollment certificate"
+          schema:
+            $ref: "#/definitions/OK"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Registrar"
+  /registrar/{enrollmentID}/tcert:
+    get:
+      tags:
+      - "Registrar"
+      summary: "Retrieve user transaction certificates"
+      description: "The /registrar/{enrollmentID}/tcert endpoint retrieves the transaction\
+        \ certificates for a given user that has registered with the certificate authority.\
+        \ If the user has registered, a confirmation message will be returned containing\
+        \ an array of URL-encoded transaction certificates. Otherwise, an error will\
+        \ result. The desired number of transaction certificates is specified with\
+        \ the optional 'count' query parameter. The default number of returned transaction\
+        \ certificates is 1 and 500 is the maximum number of certificates that can\
+        \ be retrieved with a single request."
+      operationId: "getUserTransactionCertificate"
+      parameters:
+      - name: "enrollmentID"
+        in: "path"
+        description: "EnrollmentID for which the certificate is requested"
+        required: true
+        type: "string"
+      - name: "count"
+        in: "query"
+        description: "The desired number of transaction certificates. The default\
+          \ number of returned transaction certificates is 1 and 500 is the maximum\
+          \ number of certificates that can be retrieved with a single request"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "Confirm registration for target user and return the desired\
+            \ number of URL-encoded transaction certificates"
+          schema:
+            $ref: "#/definitions/OK"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Registrar"
+  /network/peers:
+    get:
+      tags:
+      - "Network"
+      summary: "List of network peers"
+      description: "The /network/peers endpoint returns a list of all existing network\
+        \ connections for the target peer node. The list includes both validating\
+        \ and non-validating peers."
+      operationId: "getPeers"
+      parameters: []
+      responses:
+        200:
+          description: "List of network peers"
+          schema:
+            $ref: "#/definitions/PeersMessage"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+      x-swagger-router-controller: "Network"
+definitions:
+  BlockchainInfo:
+    type: "object"
+    properties:
+      height:
+        type: "integer"
+        format: "uint64"
+        description: "Current height of the blockchain."
+      currentBlockHash:
+        type: "string"
+        format: "bytes"
+        description: "Hash of the last block in the blockchain."
+      previousBlockHash:
+        type: "string"
+        format: "bytes"
+        description: "Hash of the previous block in the blockchain."
+    example:
+      previousBlockHash: "previousBlockHash"
+      currentBlockHash: "currentBlockHash"
+      height: 0
+  Block:
+    type: "object"
+    properties:
+      proposerID:
+        type: "string"
+        description: "Creator/originator of the block."
+      timestamp:
+        description: "Time of block creation."
+        $ref: "#/definitions/Timestamp"
+      transactions:
+        type: "array"
+        items:
+          $ref: "#/definitions/Transaction"
+      stateHash:
+        type: "string"
+        format: "bytes"
+        description: "Global state hash after executing all transactions in the block."
+      previousBlockHash:
+        type: "string"
+        format: "bytes"
+        description: "Hash of the previous block in the blockchain."
+      consensusMetadata:
+        type: "string"
+        format: "bytes"
+        description: "Metadata required for consensus."
+      nonHashData:
+        type: "string"
+        format: "bytes"
+        description: "Data stored in the block, but excluded from the computation\
+          \ of block hash."
+    example:
+      previousBlockHash: "previousBlockHash"
+      consensusMetadata: "consensusMetadata"
+      stateHash: "stateHash"
+      nonHashData: "nonHashData"
+      proposerID: "proposerID"
+      transactions:
+      - chaincodeID: "chaincodeID"
+        payload: "payload"
+        signature: "signature"
+        cert: "cert"
+        id: "id"
+        type: "UNDEFINED"
+        nonce: "nonce"
+        timestamp:
+          seconds: 0
+          nanos: 6
+        confidentialityLevel: "PUBLIC"
+      - chaincodeID: "chaincodeID"
+        payload: "payload"
+        signature: "signature"
+        cert: "cert"
+        id: "id"
+        type: "UNDEFINED"
+        nonce: "nonce"
+        timestamp:
+          seconds: 0
+          nanos: 6
+        confidentialityLevel: "PUBLIC"
+      timestamp:
+        seconds: 0
+        nanos: 6
+  Transaction:
+    type: "object"
+    properties:
+      type:
+        type: "string"
+        example: "UNDEFINED"
+        description: "Transaction type."
+        enum:
+        - "UNDEFINED"
+        - "CHAINCODE_DEPLOY"
+        - "CHAINCODE_INVOKE"
+        - "CHAINCODE_QUERY"
+        - "CHAINCODE_TERMINATE"
+        default: "UNDEFINED"
+      chaincodeID:
+        type: "string"
+        format: "bytes"
+        description: "Chaincode identifier as bytes."
+      payload:
+        type: "string"
+        format: "bytes"
+        description: "Payload supplied for Chaincode function execution."
+      id:
+        type: "string"
+        description: "Unique transaction identifier."
+      timestamp:
+        description: "Time at which the chanincode becomes executable."
+        $ref: "#/definitions/Timestamp"
+      confidentialityLevel:
+        description: "Confidentiality level of the Chaincode."
+        $ref: "#/definitions/ConfidentialityLevel"
+      nonce:
+        type: "string"
+        format: "bytes"
+        description: "Nonce value generated for this transaction."
+      cert:
+        type: "string"
+        format: "bytes"
+        description: "Certificate of client sending the transaction."
+      signature:
+        type: "string"
+        format: "bytes"
+        description: "Signature of client sending the transaction."
+    example:
+      chaincodeID: "chaincodeID"
+      payload: "payload"
+      signature: "signature"
+      cert: "cert"
+      id: "id"
+      type: "UNDEFINED"
+      nonce: "nonce"
+      timestamp:
+        seconds: 0
+        nanos: 6
+      confidentialityLevel: "PUBLIC"
+  ChaincodeID:
+    type: "object"
+    properties:
+      path:
+        type: "string"
+        description: "Chaincode location in the file system. This value is required\
+          \ by the deploy transaction."
+      name:
+        type: "string"
+        description: "Chaincode name identifier. This value is required by the invoke\
+          \ and query transactions."
+    example:
+      path: "path"
+      name: "name"
+  ChaincodeSpec:
+    type: "object"
+    properties:
+      type:
+        type: "integer"
+        example: 1
+        description: "Chaincode specification language."
+      chaincodeID:
+        description: "Unique Chaincode identifier."
+        $ref: "#/definitions/ChaincodeID"
+      ctorMsg:
+        description: "Specific function to execute within the Chaincode."
+        $ref: "#/definitions/ChaincodeInput"
+      secureContext:
+        type: "string"
+        description: "Username when security is enabled."
+      confidentialityLevel:
+        description: "Confidentiality level of the Chaincode."
+        $ref: "#/definitions/ConfidentialityLevel"
+    example:
+      chaincodeID:
+        path: "path"
+        name: "name"
+      ctorMsg:
+        args:
+        - "args"
+        - "args"
+      secureContext: "secureContext"
+      type: 1
+      confidentialityLevel: "PUBLIC"
+  ChaincodeInvocationSpec:
+    type: "object"
+    properties:
+      chaincodeSpec:
+        description: "Chaincode specification message."
+        $ref: "#/definitions/ChaincodeSpec"
+  ChaincodeOpPayload:
+    type: "object"
+    required:
+    - "id"
+    - "jsonrpc"
+    - "method"
+    - "params"
+    properties:
+      jsonrpc:
+        type: "string"
+        description: "A string specifying the version of the JSON-RPC protocol. Must\
+          \ be exactly '2.0'."
+        default: "2.0"
+      method:
+        type: "string"
+        description: "A string containing the name of the method to be invoked. Must\
+          \ be 'deploy', 'invoke', or 'query'."
+      params:
+        description: "A required Chaincode specification message identifying the target\
+          \ chaincode."
+        $ref: "#/definitions/ChaincodeSpec"
+      id:
+        type: "integer"
+        format: "int64"
+        description: "An integer number used to correlate the request and response\
+          \ objects. If it is not included, the request is assumed to be a notification\
+          \ and the server will not generate a response."
+    example:
+      method: "method"
+      id: 0
+      jsonrpc: "2.0"
+      params:
+        chaincodeID:
+          path: "path"
+          name: "name"
+        ctorMsg:
+          args:
+          - "args"
+          - "args"
+        secureContext: "secureContext"
+        type: 1
+        confidentialityLevel: "PUBLIC"
+  ConfidentialityLevel:
+    type: "string"
+    description: "Confidentiality level of the Chaincode."
+    example: "PUBLIC"
+    enum:
+    - "PUBLIC"
+    - "CONFIDENTIAL"
+    default: "PUBLIC"
+  ChaincodeInput:
+    type: "object"
+    properties:
+      args:
+        type: "array"
+        description: "Arguments supplied to the Chaincode function."
+        items:
+          type: "string"
+    example:
+      args:
+      - "args"
+      - "args"
+  Secret:
+    type: "object"
+    properties:
+      enrollId:
+        type: "string"
+        description: "User enrollment id registered with the certificate authority."
+      enrollSecret:
+        type: "string"
+        description: "User enrollment password registered with the certificate authority."
+    example:
+      enrollId: "enrollId"
+      enrollSecret: "enrollSecret"
+  Timestamp:
+    type: "object"
+    properties:
+      seconds:
+        type: "integer"
+        format: "int64"
+        description: "Represents seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.\
+          \ Must be from from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive."
+      nanos:
+        type: "integer"
+        format: "int32"
+        description: "Non-negative fractions of a second at nanosecond resolution.\
+          \ Negative second values with fractions must still have non-negative nanos\
+          \ values that count forward in time. Must be from 0 to 999,999,999 inclusive."
+    example:
+      seconds: 0
+      nanos: 6
+  PeersMessage:
+    type: "object"
+    properties:
+      peers:
+        type: "array"
+        items:
+          $ref: "#/definitions/PeerEndpoint"
+    example:
+      peers:
+      - address: "address"
+        pkiID: "pkiID"
+        ID:
+          name: "name"
+        type: "UNDEFINED"
+      - address: "address"
+        pkiID: "pkiID"
+        ID:
+          name: "name"
+        type: "UNDEFINED"
+  PeerEndpoint:
+    type: "object"
+    properties:
+      ID:
+        description: "Unique peer identifier."
+        $ref: "#/definitions/PeerID"
+      address:
+        type: "string"
+        description: "ipaddress:port combination identifying a network peer."
+      type:
+        type: "string"
+        example: "UNDEFINED"
+        description: "Network peer type."
+        enum:
+        - "UNDEFINED"
+        - "VALIDATOR"
+        - "NON_VALIDATOR"
+        default: "UNDEFINED"
+      pkiID:
+        type: "string"
+        format: "bytes"
+        description: "PKI identifier for the network peer."
+    example:
+      address: "address"
+      pkiID: "pkiID"
+      ID:
+        name: "name"
+      type: "UNDEFINED"
+  PeerID:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "Name which uniquely identifies a network peer."
+    example:
+      name: "name"
+  Error:
+    type: "object"
+    properties:
+      Error:
+        type: "string"
+        description: "A descriptive message explaining the cause of error."
+  OK:
+    type: "object"
+    properties:
+      OK:
+        type: "string"
+        description: "A descriptive message confirming a successful request."
+      message:
+        type: "string"
+        description: "An optional parameter containing additional information about\
+          \ the request."
+    example:
+      OK: "OK"
+      message: "message"
+  ChaincodeOpSuccess:
+    type: "object"
+    required:
+    - "id"
+    - "jsonrpc"
+    - "result"
+    properties:
+      jsonrpc:
+        type: "string"
+        description: "A string specifying the version of the JSON-RPC protocol. Must\
+          \ be exactly '2.0'."
+        default: "2.0"
+      result:
+        description: "The value of this element is determined by the method invoked\
+          \ on the server."
+        $ref: "#/definitions/rpcResponse"
+      id:
+        type: "integer"
+        format: "int64"
+        description: "This number will be the same as the value of the id member in\
+          \ the request object."
+        default: 123
+    example:
+      result:
+        Status: "OK"
+        Message: "500"
+      id: 0
+      jsonrpc: "2.0"
+  ChaincodeOpFailure:
+    type: "object"
+    required:
+    - "error"
+    - "id"
+    - "jsonrpc"
+    properties:
+      jsonrpc:
+        type: "string"
+        description: "A string specifying the version of the JSON-RPC protocol. Must\
+          \ be exactly '2.0'."
+        default: "2.0"
+      error:
+        description: "A structured value specifying the code and description of the\
+          \ error that occurred."
+        $ref: "#/definitions/rpcError"
+      id:
+        type: "integer"
+        format: "int64"
+        description: "This number will be the same as the value of the id member in\
+          \ the request object. If there was an error detecting the id in the request\
+          \ object (e.g. Parse error/Invalid Request), it will be null."
+        default: 123
+  rpcResponse:
+    type: "object"
+    required:
+    - "Status"
+    properties:
+      Status:
+        type: "string"
+        description: "A string confirming successful request execution."
+        default: "OK"
+      Message:
+        type: "string"
+        description: "Additional information about the response or values returned."
+        default: "500"
+    example:
+      Status: "OK"
+      Message: "500"
+  rpcError:
+    type: "object"
+    required:
+    - "code"
+    - "message"
+    properties:
+      code:
+        type: "integer"
+        format: "int64"
+        description: "A number that indicates the error type that occurred."
+        default: -32700
+      message:
+        type: "string"
+        description: "A string providing a short description of the error."
+        default: "Parse error"
+      data:
+        type: "string"
+        description: "A primitive or structured value that contains additional information\
+          \ about the error (e.g. detailed error information, nested errors etc.)."
+        default: "Error unmarshalling chaincode request payload: unexpected end of\
+          \ JSON input"
